@@ -1,29 +1,27 @@
 //@version=5
-strategy("Simple MA Crossover Bot (Signal Exits, SMA100 Filter)", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+strategy("Simple MA Crossover Bot", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
 
 // Inputs
 fastLength = input.int(9, "Fast MA Length", minval=1)
 slowLength = input.int(21, "Slow MA Length", minval=1)
-sma100Length = input.int(100, "SMA 100 Length", minval=1)
+stopLossPct = input.float(2.0, "Stop Loss %", minval=0.1, step=0.1)
+takeProfitPct = input.float(5.0, "Take Profit %", minval=0.1, step=0.1)
 
 // Calculate MAs
 fastMA = ta.sma(close, fastLength)
 slowMA = ta.sma(close, slowLength)
-// Calculate SMA100
-sma100 = ta.sma(close, sma100Length)
 
 // Plot MAs
 plot(fastMA, color=color.blue, title="Fast MA")
 plot(slowMA, color=color.red, title="Slow MA")
 
 // Strategy logic
-if ta.crossover(fastMA, slowMA) and close > sma100
+if ta.crossover(fastMA, slowMA)
     strategy.entry("Buy", strategy.long)
 
-
-if ta.crossunder(fastMA, slowMA) and close < sma100
+if ta.crossunder(fastMA, slowMA)
     strategy.entry("Sell", strategy.short)
 
-// Show signals
-plotshape(ta.crossover(fastMA, slowMA) and close > sma100, style=shape.labelup, location=location.belowbar, color=color.green, text="Buy Signal")
-plotshape(ta.crossunder(fastMA, slowMA) and close < sma100, style=shape.labeldown, location=location.abovebar, color=color.red, text="Sell Signal")
+// Exit conditions
+strategy.exit("Exit Long", "Buy", stop=strategy.position_avg_price * (1 - stopLossPct/100), limit=strategy.position_avg_price * (1 + takeProfitPct/100))
+strategy.exit("Exit Short", "Sell", stop=strategy.position_avg_price * (1 + stopLossPct/100), limit=strategy.position_avg_price * (1 - takeProfitPct/100))
