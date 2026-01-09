@@ -8,6 +8,8 @@
 length = input.int(10, "Trend Length")
 target = input.int(0, "Set Targets")
 orderAmount = input.float(2.0, "Order Amount %", minval=0.1, step=0.1)
+slPct = input.float(2.0, "Stop Loss %", minval=0.1, step=0.1)
+tpPct = input.float(4.0, "Take Profit %", minval=0.1, step=0.1)
 // }
 
 strategy("TD-Target Trend Strategy", overlay = true)
@@ -54,8 +56,8 @@ if signal_up
 if signal_down
     strategy.entry("Sell", strategy.short, qty = strategy.equity * orderAmount / 100)
 
-strategy.close("Buy", when=signal_down)
-strategy.close("Sell", when=signal_up)
+strategy.exit("Exit Buy", "Buy", stop=strategy.position_avg_price * (1 - slPct/100), limit=strategy.position_avg_price * (1 + tpPct/100))
+strategy.exit("Exit Sell", "Sell", stop=strategy.position_avg_price * (1 + slPct/100), limit=strategy.position_avg_price * (1 - tpPct/100))
 // }
 
 // ＰＬＯＴ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――{
