@@ -1,69 +1,27 @@
 //@version=5
-strategy("Within 4H Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+indicator("Simple S/R on 4H", overlay=true)
 
-// This strategy is designed for 5M timeframe
-// It tracks resistance and support from 4H data starting from 9 AM NY time
-// Issues sell orders on pullbacks after breaking above resistance
-// Issues buy orders on rallies after breaking below support
-
-// For simplicity, resistance is the highest high from the start, support is the lowest low
-// In a full implementation, use security() to get 4H highs/lows from session start
+// This indicator plots support and resistance as the highest high and lowest low from the start of each trading day
+// Apply on 4H timeframe for best results
 
 var float resistance = na
 var float support = na
-var bool brokeAbove = false
-var float highDuringBreak = na
-var bool brokeBelow = false
-var float lowDuringBreak = na
+
+// Reset S/R at the start of each trading day
+if session.regular == "regular" and session.regular != session.regular[1]
+    resistance := na
+    support := na
 
 // Update resistance and support
-if resistance == na
+if na(resistance)
     resistance := high
 else if high > resistance
     resistance := high
 
-if support == na
+if na(support)
     support := low
 else if low < support
     support := low
-
-// Strategy logic
-if close > resistance and not brokeAbove
-    brokeAbove := true
-    highDuringBreak := high
-else if brokeAbove
-    if high > highDuringBreak
-        highDuringBreak := high
-
-if brokeAbove and close < resistance
-    strategy.entry("Sell", strategy.short)
-    float entryPrice = close
-    float sl = highDuringBreak
-    float risk = sl - entryPrice
-    float tp = entryPrice - 1.5 * risk
-    strategy.exit("Exit Sell", "Sell", stop=sl, limit=tp)
-    // Reset
-    brokeAbove := false
-    highDuringBreak := na
-
-// Buy logic
-if close < support and not brokeBelow
-    brokeBelow := true
-    lowDuringBreak := low
-else if brokeBelow
-    if low < lowDuringBreak
-        lowDuringBreak := low
-
-if brokeBelow and close > support
-    strategy.entry("Buy", strategy.long)
-    entryPrice = close
-    sl = lowDuringBreak
-    risk = entryPrice - sl
-    tp = entryPrice + 1.5 * risk
-    strategy.exit("Exit Buy", "Buy", stop=sl, limit=tp)
-    // Reset
-    brokeBelow := false
-    lowDuringBreak := na
 
 // Plot resistance and support
 plot(resistance, color=color.red, title="Resistance", linewidth=2)

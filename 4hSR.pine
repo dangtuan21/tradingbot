@@ -1,0 +1,36 @@
+//@version=5
+indicator("4H S/R from First Candle", overlay=true)
+
+// This indicator draws support and resistance based on the first 4H candle after 9 AM NY time
+// Support = low of that candle, Resistance = high of that candle
+// Shows S/R for the last 3 days as horizontal lines across the chart
+
+var float res0 = na
+var float sup0 = na
+var float res1 = na
+var float sup1 = na
+var float res2 = na
+var float sup2 = na
+var bool setToday = false
+
+// Shift levels and reset flag on new calendar day
+if dayofmonth != dayofmonth[1]
+    res2 := res1
+    sup2 := sup1
+    res1 := res0
+    sup1 := sup0
+    setToday := false
+
+// Set S/R on the first bar after 9 AM NY
+if not setToday and hour(time) >= 9
+    res0 := high
+    sup0 := low
+    setToday := true
+
+// Plot the last 3 days' S/R
+plot(res0, color=color.red, title="Resistance 0", linewidth=2)
+plot(sup0, color=color.green, title="Support 0", linewidth=2)
+plot(res1, color=color.blue, title="Resistance 1", linewidth=1)
+plot(sup1, color=color.purple, title="Support 1", linewidth=1)
+plot(res2, color=color.orange, title="Resistance 2", linewidth=1)
+plot(sup2, color=color.teal, title="Support 2", linewidth=1)
