@@ -1,0 +1,75 @@
+//@version=5
+strategy("Within 4H Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+
+// This strategy is designed for 5M timeframe
+// It tracks resistance and support from 4H data starting from 9 AM NY time
+// Issues sell orders on pullbacks after breaking above resistance
+// Issues buy orders on rallies after breaking below support
+
+// For simplicity, resistance is the highest high from the start, support is the lowest low
+// In a full implementation, use security() to get 4H highs/lows from session start
+
+var float resistance = na
+var float support = na
+var bool brokeAbove = false
+var float highDuringBreak = na
+var bool brokeBelow = false
+var float lowDuringBreak = na
+
+// Update resistance and support
+if resistance == na
+    resistance := high
+else if high > resistance
+    resistance := high
+
+if support == na
+    support := low
+else if low < support
+    support := low
+
+// Strategy logic
+if close > resistance and not brokeAbove
+    brokeAbove := true
+    highDuringBreak := high
+else if brokeAbove
+    if high > highDuringBreak
+        highDuringBreak := high
+
+if brokeAbove and close < resistance
+    strategy.entry("Sell", strategy.short)
+    float entryPrice = close
+    float sl = highDuringBreak
+    float risk = sl - entryPrice
+    float tp = entryPrice - 1.5 * risk
+    strategy.exit("Exit Sell", "Sell", stop=sl, limit=tp)
+    // Reset
+    brokeAbove := false
+    highDuringBreak := na
+
+// Buy logic
+if close < support and not brokeBelow
+    brokeBelow := true
+    lowDuringBreak := low
+else if brokeBelow
+    if low < lowDuringBreak
+        lowDuringBreak := low
+
+if brokeBelow and close > support
+    strategy.entry("Buy", strategy.long)
+    entryPrice = close
+    sl = lowDuringBreak
+    risk = entryPrice - sl
+    tp = entryPrice + 1.5 * risk
+    strategy.exit("Exit Buy", "Buy", stop=sl, limit=tp)
+    // Reset
+    brokeBelow := false
+    lowDuringBreak := na
+
+// Plot resistance and support
+plot(resistance, color=color.red, title="Resistance", linewidth=2)
+plot(support, color=color.green, title="Support", linewidth=2)
+
+// Display current levels as labels
+if barstate.islast
+    label.new(bar_index, high, text="Resistance: " + str.tostring(resistance), color=color.red, style=label.style_label_down, yloc=yloc.abovebar)
+    label.new(bar_index, low, text="Support: " + str.tostring(support), color=color.green, style=label.style_label_up, yloc=yloc.belowbar)
