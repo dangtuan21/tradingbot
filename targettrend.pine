@@ -10,6 +10,8 @@ target = input.int(0, "Set Targets")
 orderAmount = input.float(2.0, "Order Amount %", minval=0.1, step=0.1)
 slPct = input.float(2.0, "Stop Loss %", minval=0.1, step=0.1)
 tpPct = input.float(4.0, "Take Profit %", minval=0.1, step=0.1)
+volLength = input.int(2, "Volume Lookback")
+limitDeltaPct = input.float(0.5, "Limit Delta Pct", minval=0.0, step=0.01)
 // }
 
 strategy("TD-Target Trend Strategy", overlay = true)
@@ -44,20 +46,41 @@ trend_value := switch
 trend_color = trend ? up_color : not trend ? dn_color : na
 
 
+// Volume calculations
+series float buyVolSeries = volume * (close > open ? 1 : 0)
+series float sellVolSeries = volume * (close < open ? 1 : 0)
+float buyVolum = ta.cum(buyVolSeries) - ta.cum(buyVolSeries)[volLength]
+float sellVolum = ta.cum(sellVolSeries) - ta.cum(sellVolSeries)[volLength]
+// float deltaPct = buyVolum > 0 ? (buyVolum - sellVolum) / (buyVolum+ sellVolum) : 0
+float deltaPct =  (buyVolum - sellVolum) / (buyVolum+ sellVolum)
+
+
 // Signal detection for trend changes
 bool signal_up   = ta.change(trend) and not trend[1]
 bool signal_down = ta.change(trend) and trend[1]
 
 
+// Filtered signals based on volume delta
+bool buySignal = volLength == 0 ? signal_up : signal_up and deltaPct > limitDeltaPct
+bool sellSignal = volLength == 0 ? signal_down : signal_down and deltaPct < -limitDeltaPct
+
+// Display volume info on signals
+if buySignal and volLength > 0
+    label.new(bar_index, low, "Buy Vol: " + str.tostring(buyVolum) + "\nSell Vol: " + str.tostring(sellVolum) + "\nDelta: " + str.tostring(deltaPct), color=up_color, style=label.style_label_down)
+
+if sellSignal and volLength > 0
+    label.new(bar_index, high, "Buy Vol: " + str.tostring(buyVolum) + "\nSell Vol: " + str.tostring(sellVolum) + "\nDelta: " + str.tostring(deltaPct), color=dn_color, style=label.style_label_up)
+
+
 // Strategy entries
-if signal_up
+if buySignal
     strategy.entry("Buy", strategy.long, qty = strategy.equity * orderAmount / 100)
 
-if signal_down
+if sellSignal
     strategy.entry("Sell", strategy.short, qty = strategy.equity * orderAmount / 100)
 
-strategy.exit("Exit Buy", "Buy", stop=strategy.position_avg_price * (1 - slPct/100), limit=strategy.position_avg_price * (1 + tpPct/100))
-strategy.exit("Exit Sell", "Sell", stop=strategy.position_avg_price * (1 + slPct/100), limit=strategy.position_avg_price * (1 - tpPct/100))
+strategy.close("Buy", when=sellSignal)
+strategy.close("Sell", when=buySignal)
 // }
 
 // ＰＬＯＴ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――{
@@ -76,7 +99,7 @@ fill(p1, p0, trend_value, hl2, color.new(chart.fg_color, 90), na)
 fill(p2, p0, trend_value, hl2, color.new(chart.fg_color, 90), na)
 
 // Plot signals on the chart
-plotshape(signal_up, "", shape.triangleup, location.belowbar, up_color, size = size.small)
-plotshape(signal_down, "", shape.triangledown, location.abovebar, dn_color, size = size.small)
+plotshape(buySignal, "", shape.triangleup, location.belowbar, up_color, size = size.small)
+plotshape(sellSignal, "", shape.triangledown, location.abovebar, dn_color, size = size.small)
 
 // }
