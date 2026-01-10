@@ -1,0 +1,69 @@
+// This work is licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International  
+// © BigBeluga - Modified for strategy conversion
+
+//@version=5
+strategy("TD-Target Trend Strategy2", overlay = true, max_lines_count = 40, initial_capital = 10000, default_qty_type = strategy.percent_of_equity, default_qty_value = 10)
+
+// INPUTS
+length = input.int(10, "Trend Length")
+target = input.int(0, "Set Targets")
+
+// VARIABLES
+var bool trend    = na
+float trend_value = na
+
+// Colors
+color up_color = #06b690
+color dn_color = color.rgb(182, 112, 6)
+
+// ATR for calculating stop loss and target levels
+atr_value = ta.sma(ta.atr(200), 200) * 0.8
+
+// Moving averages for trend detection
+sma_high  = ta.sma(high, length) + atr_value
+sma_low   = ta.sma(low, length) - atr_value
+plot_color = color.new(color.white, 80)
+
+// Determine trend based on crossovers
+if ta.crossover(close, sma_high) and barstate.isconfirmed
+    trend := true
+if ta.crossunder(close, sma_low) and barstate.isconfirmed
+    trend := false
+
+trend_value := trend ? sma_low : sma_high
+trend_color = trend ? up_color : dn_color
+
+// Signal detection for trend changes
+signal_up   = ta.change(trend) and not trend[1]
+signal_down = ta.change(trend) and trend[1]
+
+// === STRATEGY EXECUTION SECTION ===
+
+// Define ATR-based stop loss and targets
+float stop_loss = close - atr_value * 3
+float take_profit = close + atr_value * 6
+
+// Entry/Exit Logic
+if signal_up
+    strategy.close("Short")
+    strategy.entry("Long", strategy.long)
+    strategy.exit("Long Exit", "Long", stop = stop_loss, limit = take_profit)
+
+if signal_down
+    strategy.close("Long")
+    strategy.entry("Short", strategy.short)
+    strategy.exit("Short Exit", "Short", stop = close + atr_value * 3, limit = close - atr_value * 6)
+
+// === VISUAL ELEMENTS (same as indicator) ===
+plotcandle(open, high, low, close, color = trend_color, wickcolor = trend_color, bordercolor = trend_color)
+
+p1 = plot(trend ? trend_value : na, style = plot.style_linebr, color = plot_color)
+p2 = plot(not trend ? trend_value : na, style = plot.style_linebr, color = plot_color)
+p0 = plot(hl2, display = display.none, editable = false)
+fill(p1, p0, trend_value, hl2, color.new(color.white, 90), na)
+fill(p2, p0, trend_value, hl2, color.new(color.white, 90), na)
+
+sigUp = signal_up ? low - atr_value * 2 : na
+sigDn = signal_down ? high + atr_value * 2 : na
+plotshape(sigUp, "", shape.triangleup, location.absolute, up_color, size = size.tiny)
+plotshape(sigDn, "", shape.triangledown, location.absolute, dn_color, size = size.tiny)

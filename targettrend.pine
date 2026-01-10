@@ -24,7 +24,8 @@ var float trend_value = na
 color up_color = #06b690
 color dn_color = color.rgb(182, 112, 6)
 
-// Moving averages for trend detection
+// ATR for calculating stop loss and target levels
+series float atr_value = ta.sma(ta.atr(200) / close, 200) * 0.8
 series float sma_high  = ta.sma(high, length)
 series float sma_low   = ta.sma(low, length)
 color       plot_color = color.new(chart.fg_color, 80)
@@ -81,6 +82,9 @@ if sellSignal
 
 strategy.close("Buy", when=sellSignal)
 strategy.close("Sell", when=buySignal)
+
+strategy.exit("Exit Buy", "Buy", stop=strategy.position_avg_price * (1 - slPct/100), limit=strategy.position_avg_price * (1 + tpPct/100))
+strategy.exit("Exit Sell", "Sell", stop=strategy.position_avg_price * (1 + slPct/100), limit=strategy.position_avg_price * (1 - tpPct/100))
 // }
 
 // ＰＬＯＴ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――{
