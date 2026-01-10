@@ -90,10 +90,10 @@ float upper_band = vidya_value + atr_value * band_distance
 float lower_band = vidya_value - atr_value * band_distance
 
 // Detect trend direction using crossovers of source with bands
-if ta.crossover(source, upper_band)
+if ta.crossover(source, upper_band) and close > ema_value
     is_trend_up := true
     is_trend_up
-if ta.crossunder(source, lower_band)
+if ta.crossunder(source, lower_band) and close < ema_value
     is_trend_up := false
     is_trend_up
 
