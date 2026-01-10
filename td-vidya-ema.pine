@@ -2,7 +2,7 @@
 // https://creativecommons.org/licenses/by-nc-sa/4.0/
 // © BigBeluga
 
-//@version=6
+//@version=5
 indicator('TD-VIDYA+EMA', 'TD-VIDYA+EMA', overlay = true, max_lines_count = 500, max_labels_count = 500)
 
 
@@ -11,6 +11,7 @@ indicator('TD-VIDYA+EMA', 'TD-VIDYA+EMA', overlay = true, max_lines_count = 500,
 int vidya_length = input.int(10, 'VIDYA Length') // Length of the VIDYA calculation
 int vidya_momentum = input.int(20, 'VIDYA Momentum') // Momentum length for VIDYA
 float band_distance = input.float(2, 'Distance factor for upper/lower bands', step = 0.1) // Distance factor for upper/lower bands
+int ema_length = input.int(100, 'EMA Length') // Length of the EMA calculation
 // Define pivot parameters
 int pivot_left_bars = 3 // Left side pivot bars
 int pivot_right_bars = pivot_left_bars // Right side pivot bars
@@ -80,6 +81,9 @@ float atr_value = ta.atr(200) // ATR calculation with length of 200
 
 // Calculate the VIDYA (Variable Index Dynamic Average)
 vidya_value = vidya_calc(source, vidya_length, vidya_momentum)
+
+// Calculate the EMA
+float ema_value = ta.ema(close, ema_length)
 
 // Calculate upper and lower bands based on VIDYA and ATR
 float upper_band = vidya_value + atr_value * band_distance
@@ -166,6 +170,9 @@ if barstate.islast
 // Plot the VIDYA trend line
 p1 = plot(smoothed_value, color = trend_color, linewidth = 2, style = plot.style_linebr)
 p2 = plot(hl2, display = display.none)
+
+// Plot the EMA line
+plot(ema_value, color = color.blue, linewidth = 1, title = 'EMA', style = plot.style_circles)
 
 // Fill between the plot and the VIDYA line
 fill(p1, p2, smoothed_value, hl2, color.new(trend_color, shadow ? 80 : 100), na)
