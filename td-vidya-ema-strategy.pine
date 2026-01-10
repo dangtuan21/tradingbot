@@ -14,6 +14,8 @@ float band_distance = input.float(2, 'Distance factor for upper/lower bands', st
 int ema_length = input.int(100, 'EMA Length') // Length of the EMA calculation
 float initial_balance = input.float(100000, 'Initial Balance') // Initial account balance
 float order_dollar = input.float(10000, 'Order Dollar Amount') // Dollar amount per order
+bool buy_only = input.bool(true, 'Buy Only') // If true, only buy orders, no sells
+float take_profit_exit_pct = input.float(50, 'Take Profit and Exit %') // Percentage for take-profit trigger and exit amount
 // Define pivot parameters
 int pivot_left_bars = 3 // Left side pivot bars
 int pivot_right_bars = pivot_left_bars // Right side pivot bars
@@ -42,6 +44,9 @@ var float display_up_volume = na // For last bar display
 var float display_down_volume = na // For last bar display
 
 var string signal_delta = na // Delta at trend change signals
+
+var float entry_price = na // Entry price for current position
+var int position_direction = 0 // 1 for long, -1 for short, 0 for flat
 // }
 
 
@@ -147,10 +152,26 @@ bool trend_cross_down = not is_trend_up and is_trend_up[1]
 if trend_cross_up
     strategy.close("Sell")
     strategy.entry("Buy", strategy.long, qty = order_dollar / close)
+    entry_price := close
+    position_direction := 1
 
 if trend_cross_down
     strategy.close("Buy")
-    strategy.entry("Sell", strategy.short, qty = order_dollar / close)
+    if not buy_only
+        strategy.entry("Sell", strategy.short, qty = order_dollar / close)
+        entry_price := close
+        position_direction := -1
+
+// Take-profit partial exit: if profit >= take_profit_exit_pct% of order_dollar, exit take_profit_exit_pct% position
+if position_direction == 1 and strategy.position_size > 0
+    float profit = (close - entry_price) * strategy.position_size
+    if profit >= (take_profit_exit_pct / 100) * order_dollar
+        strategy.close("Partial Exit Long", qty = strategy.position_size * (take_profit_exit_pct / 100))
+
+else if position_direction == -1 and strategy.position_size < 0
+    float profit = (entry_price - close) * math.abs(strategy.position_size)
+    if profit >= (take_profit_exit_pct / 100) * order_dollar
+        strategy.close("Partial Exit Short", qty = math.abs(strategy.position_size) * (take_profit_exit_pct / 100))
 
 // Calculate average volume
 float avg_volume_delta = (up_trend_volume + down_trend_volume) / 2
